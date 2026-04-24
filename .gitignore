@@ -1,0 +1,46 @@
+# ------------------------------------------------------------
+# Kaggle data — not redistributable under competition terms.
+# Graders download directly from the competition page.
+# ------------------------------------------------------------
+data/*.csv
+!data/.gitkeep
+
+# ------------------------------------------------------------
+# Outputs: intermediate model artefacts (big, regenerable).
+# Keep only the shipped submission CSVs in git.
+# ------------------------------------------------------------
+outputs/oof/
+outputs/models/
+outputs/*.log
+!outputs/submission.csv
+!outputs/submission_iter8_0.8407_backup.csv
+
+# ------------------------------------------------------------
+# Python
+# ------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ------------------------------------------------------------
+# LaTeX temp files (keep .tex + .pdf)
+# ------------------------------------------------------------
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.synctex.gz
+report/*.fls
+report/*.fdb_latexmk
+
+# ------------------------------------------------------------
+# OS
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db

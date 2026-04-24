@@ -1,0 +1,212 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{caption}
+\usepackage{parskip}
+
+\hypersetup{colorlinks=true,linkcolor=blue!60!black,urlcolor=blue!60!black}
+
+% Tighter list spacing via base LaTeX counters
+\setlength{\parskip}{3pt}
+
+% ---- tighter captions ----
+\captionsetup{font=small,labelfont=bf}
+
+\begin{document}
+
+% =====================================================================
+% COVER PAGE
+% =====================================================================
+\begin{titlepage}
+    \centering
+    \vspace*{3cm}
+    {\Huge \textbf{CreditSense}\par}
+    \vspace{0.3cm}
+    {\LARGE Loan Risk Assessment Challenge\par}
+    \vspace{2cm}
+    {\large AI1215 --- Introduction to Machine Learning\par}
+    {\large Data Challenge, Spring 2026 \par}
+    \vspace{3cm}
+    \rule{0.6\textwidth}{0.6pt}\\[0.6em]
+    {\Large \textbf{Team Slavs}\par}
+    \vspace{0.8em}
+    {\large Makar Ulesov \quad Ivan Kanev \quad Delyan Hristov\par}
+    \rule{0.6\textwidth}{0.6pt}\\[3cm]
+    \begin{tabular}{rl}
+        \textbf{Kaggle username:} & \texttt{\textless{}KAGGLE\_USERNAME\textgreater{}} \\
+        \textbf{Final Kaggle score:} & approx.\ 0.84 (combined) \\
+        \textbf{Leaderboard rank:} & 14 / 27 \\
+        \textbf{Total iterations run:} & 14 \\
+        \textbf{Submission file:} & \texttt{outputs/submission.csv} \\
+        \textbf{Reproduction:} & \texttt{python code/reproduce\_final.py} \\
+    \end{tabular}
+    \vfill
+    {\small Report generated \today. \quad See \texttt{README.txt} for full reproduction instructions.}
+\end{titlepage}
+
+% =====================================================================
+% SECTION 1 — DATA EXPLORATION & PREPROCESSING (30%)
+% =====================================================================
+\section{Data Exploration \& Preprocessing}
+\label{sec:eda}
+
+The dataset contains 35\,000 training and 15\,000 test applicants with 55 features spanning demographics, employment, assets/liabilities, credit history, and loan request. Two targets are predicted jointly: \textbf{RiskTier} (5-way classification, \(\{0,1,2,3,4\}\)) and \textbf{InterestRate} (regression in \([4.99,\,35.99]\%\)). The Kaggle leaderboard scores \(0.5\cdot\mathrm{Accuracy} + 0.5\cdot R^2\); the baseline linear models achieve \(\sim\!0.51\).
+
+\paragraph{Key findings.}
+\begin{itemize}
+    \item \textbf{RiskTier is balanced.} Counts are 6\,724 / 7\,283 / 6\,998 / 6\,812 / 7\,183 for tiers 0--4 (Figure~\ref{fig:targets}, left). No class weighting or SMOTE was needed.
+    \item \textbf{InterestRate is multi-modal with a floor.} Mean 7.31\%, median 6.08\%, but 33\% of rows are exactly at the legal floor of 4.99\% (Figure~\ref{fig:targets}, middle). Tiers 0--3 have rate means between 6.01 and 6.56\% with \(\sigma \approx 1.5\); tier 4 has mean 11.55\% and \(\sigma = 7.36\), producing a long right tail (Figure~\ref{fig:targets}, right). This two-regime structure (``prime'' vs.\ ``subprime'') shaped much of our modelling.
+    \item \textbf{Variance decomposition.} Within-tier variance in rate explains 72\% of total rate variance; between-tier only 28\%. Perfect RiskTier prediction alone therefore caps \(R^2\) at \(\approx 0.28\) --- accurate regression must capture within-tier rate drivers, not just tier identity.
+    \item \textbf{Structural missingness.} The PDF explicitly flagged this and the data confirm it (Figure~\ref{fig:missing}): \texttt{StudentLoanOutstandingBalance} is missing 60\% of the time (older applicants), \texttt{CollateralType} 55\% (unsecured loans), \texttt{PropertyValue} and \texttt{MortgageOutstandingBalance} 45\% (renters). Verified empirically: 99\% of rows with \texttt{HomeOwnership = RENT} have missing \texttt{PropertyValue}.
+    \item \textbf{Money variables are right-skewed log-normal.} \texttt{AnnualIncome}, balances, and asset values benefit from a \(\log(1+x)\) transform before tree training.
+\end{itemize}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/fig_targets.pdf}
+    \caption{\textbf{Target distributions.} Left: near-uniform RiskTier. Middle: InterestRate with a pronounced spike at the 4.99\% floor and a long right tail driven by tier 4. Right: box plots confirm tiers 0--3 are nearly indistinguishable on rate alone while tier 4 is a separate regime.}
+    \label{fig:targets}
+\end{figure}
+
+\paragraph{Preprocessing choices (Table~\ref{tab:preproc}).}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{3.4cm}p{6.8cm}p{5.5cm}}
+\toprule
+\textbf{Step} & \textbf{Choice} & \textbf{Rationale} \\
+\midrule
+Missing indicators & \texttt{\{col\}\_was\_missing} binary for every col with NaN & Missingness is signal (PDF confirms); preserve it before imputation. \\
+Numeric imputation & 0 for structural-zero columns (e.g.\ \texttt{PropertyValue}); median elsewhere & Zero is semantically correct for a renter's mortgage balance. \\
+Outliers & Winsorise money columns at 99.5th percentile & Prevents a handful of ultra-high earners from dominating splits. \\
+Categorical --- low card & One-hot (cardinality $\leq 8$) & Safe when feature explosion is minor. \\
+Categorical --- high card & K-fold target encoding (fold \(i\) encoded from folds \(\neq i\)) + integer codes & Prevents leakage from \texttt{InterestRate}; integer codes let CatBoost exploit native encoders. \\
+Ordinal mapping & \texttt{EducationLevel} $\to$ integer rank & Keeps the ordinal relationship that one-hot would destroy. \\
+\bottomrule
+\end{tabular}
+\caption{Preprocessing decisions in \texttt{code/preprocessing.py}.}
+\label{tab:preproc}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.82\linewidth]{figures/fig_missing.pdf}
+    \caption{\textbf{Columns with $>$1\% missingness.} Every missingness block corresponds to a structural population (renters, unsecured borrowers, older non-student borrowers). Missing indicators retain this signal; median imputation would erase it.}
+    \label{fig:missing}
+\end{figure}
+
+% =====================================================================
+% SECTION 2 — FEATURE ENGINEERING (35%)
+% =====================================================================
+\section{Feature Engineering}
+\label{sec:feateng}
+
+We grew the original 55 features into roughly 170 model inputs across six groups. Every engineered feature is documented with financial intuition in \texttt{code/features.py} and grouped so the ablation study (Table~\ref{tab:ablation}) can isolate contribution.
+
+\begin{itemize}
+    \item \textbf{Balance-sheet.} \(\texttt{feat\_NetWorth}= \text{assets}-\text{liabilities}\); \(\texttt{feat\_DebtToAssets}\); \(\texttt{feat\_LiquidToLoan}= (\text{Savings}+\text{Checking}) / \text{RequestedLoan}\); \(\texttt{feat\_CashRunwayMonths}\); \(\texttt{feat\_MortgageLTV}\). Financial intuition: underwriters assess leverage and liquidity buffer, not just income.
+    \item \textbf{Credit behaviour.} \(\texttt{feat\_DelinquencyScore} = 1\!\cdot\!\text{Late30} + 3\!\cdot\!\text{Late60} + 9\!\cdot\!\text{Late90}\) mirrors FICO severity weighting. \(\texttt{feat\_DerogatoryScore}\) uses \(10\!\cdot\!\text{Bankruptcies} + 5\!\cdot\!\text{ChargeOffs} + 4\!\cdot\!\text{PublicRecords} + 3\!\cdot\!\text{Collections}\). Composite \(\texttt{feat\_BadEventsTotal}\) is the single strongest RiskTier predictor in SHAP analysis.
+    \item \textbf{Credit maturity.} \(\texttt{feat\_ThinFile}\) (history $<$ 24mo), \(\texttt{feat\_ThickFile}\) ($>$120mo), \(\texttt{feat\_NewAccountSpree} = \text{Oldest}-\text{AvgAge}\), \(\texttt{feat\_CreditAgeRatio}\). Thin-file borrowers are systematically riskier at matched DTI.
+    \item \textbf{Demographics + stability.} \(\texttt{feat\_EmpStability} = \text{EmpLength}/(\text{Age}-18)\); \(\texttt{feat\_SameEmployerShare}\); \(\texttt{feat\_StableResident}\) ($>$3 yrs); \(\texttt{feat\_HasSecondaryIncome}\); \(\texttt{feat\_IncomeVerified}\).
+    \item \textbf{Loan request.} \(\texttt{feat\_MonthlyPrincipal}\); \(\texttt{feat\_LoanToAssets}\); \(\texttt{feat\_PaymentReserveMonths}\); \(\texttt{feat\_HasCollateral}\); \(\texttt{feat\_RepeatCustomer}\).
+    \item \textbf{Interactions.} \(\texttt{feat\_DTI\_x\_Util}\), \(\texttt{feat\_LTI\_x\_Term}\), \(\texttt{feat\_PTI\_x\_BadEvents}\), \(\texttt{feat\_DerogPerHistoryYear}\). Encode known nonlinear compounds (high DTI $\times$ high utilisation, long term $\times$ high LTI).
+\end{itemize}
+
+\paragraph{Multi-target encoding.} For the three high-cardinality categoricals (\texttt{State}, \texttt{JobCategory}, \texttt{LoanPurpose}), we encode each group with three statistics: mean \(\text{InterestRate}\), \(P(\text{tier}=4)\), and per-group rate \(\sigma\). This triples the signal vs.\ single-mean encoding. K-fold computation on train / full-train on test protects against leakage; an interesting artefact is discussed in \S\ref{sec:models} (adversarial AUC = 1.00).
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{5.5cm}cc}
+\toprule
+\textbf{Feature group added (cumulative)} & \textbf{OOF Acc (A)} & \textbf{OOF $R^2$ (B)} \\
+\midrule
+Raw 55 features + one-hot only (linear baseline)     & 0.538 & 0.502 \\
++ Missing indicators + imputation + winsorisation    & 0.571 & 0.549 \\
++ Balance-sheet block                                & 0.613 & 0.604 \\
++ Credit-behaviour + derogatory composites           & 0.671 & 0.667 \\
++ Maturity + demographics + loan-request blocks      & 0.729 & 0.728 \\
++ Log-transforms + interactions                      & 0.748 & 0.758 \\
++ Multi-target encoding (high-card categoricals)     & 0.793 & 0.831 \\
++ K-NN target features (mean rate, $P(\text{tier}=k)$ of 10 NN) & \textbf{0.802} & \textbf{0.836} \\
+\bottomrule
+\end{tabular}
+\caption{Cumulative ablation of feature blocks measured as single-LightGBM OOF per task. Every block contributed; multi-target encoding and KNN target features delivered the largest individual lifts.}
+\label{tab:ablation}
+\end{table}
+
+% =====================================================================
+% SECTION 3 — MODEL SELECTION & TUNING (35%)
+% =====================================================================
+\section{Model Selection \& Tuning}
+\label{sec:models}
+
+\paragraph{Models compared.} We evaluated every candidate on the same 5-fold \texttt{StratifiedKFold} on RiskTier, with identical fold indices reused for Task B so out-of-fold predictions align across tasks (Table~\ref{tab:models}). This alignment is the foundation of the cross-task stacking that powers our final ensemble.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{p{5.0cm}ccp{6.0cm}}
+\toprule
+\textbf{Model} & \textbf{Task A Acc} & \textbf{Task B $R^2$} & \textbf{Notes} \\
+\midrule
+Logistic / Linear Regression            & 0.538 & 0.502 & PDF baseline $\approx 0.51$ combined. \\
+LightGBM                                & 0.794 & 0.833 & LR 0.02, num\_leaves 127, L1+L2 reg. \\
+XGBoost                                 & 0.792 & 0.831 & LR 0.02, max\_depth 8, hist method. \\
+CatBoost                                & \textbf{0.809} & \textbf{0.834} & Best single model; native cats +0.002. \\
+LGB regression-on-tier (ordinal trick)  & 0.791 & ---   & Round \& clip to class at inference. \\
+Two-stage Task A (binary + 4-class)     & 0.796 & ---   & Binary $\text{is\_tier}4\,\rightarrow\,$4-class on prime. \\
+Stage-2 meta-LGBM (single seed)         & 0.837 & 0.840 & Input: 170 base features + 40 OOF features. \\
+\textbf{Stage-2 multi-seed + Ridge blend} & \textbf{0.840} & \textbf{0.841} & \textbf{Our champion: combined 0.8407.} \\
+\bottomrule
+\end{tabular}
+\caption{Model comparison. All OOF scores on 5-fold stratified CV.}
+\label{tab:models}
+\end{table}
+
+\paragraph{Cross-task stacking.} The dominant architectural choice. Since \(\text{RiskTier}\) and \(\text{InterestRate}\) are nearly collinear, OOF predictions of each task carry information the other's feature matrix lacks. We produce OOF class probabilities for Task A (5 floats per row) and scalar OOF rate predictions for Task B, concatenate them with the 170 original features, and retrain a second-stage LightGBM per task. The stage-2 model consistently dominates the final convex blend (0.80--0.95 weight), confirming it internalises all the ensemble diversity the stage-1 models provide.
+
+\paragraph{Overfitting controls.}
+\begin{itemize}
+    \item Early stopping with patience 200 on a held-out fold for every model.
+    \item K-fold target encoding (fold \(i\) encoded from folds \(\neq i\)) prevents leakage from InterestRate into training features.
+    \item \texttt{feature\_fraction} = 0.75, \texttt{bagging\_fraction} = 0.80 on LightGBM for tree diversity.
+    \item Winsorisation caps predictor extremes; multi-seed (42, 1337, 2024) averaging on the stage-2 meta-learner reduces variance.
+    \item \textbf{Adversarial validation.} We trained a binary classifier to distinguish train from test rows and observed OOF AUC = 1.00 --- the two sets were perfectly separable. The culprit was our multi-target encoder: train values are noisier (K-fold) than test values (full-train mean). An \texttt{iter7} experiment dropped the 20 worst offenders; the result was essentially flat (+0.0001), indicating the stage-2 model already implicitly down-weighted them. We report this artefact because it exemplifies the value of adversarial validation even when the fix is small.
+\end{itemize}
+
+\paragraph{Do the same features matter for both tasks?} Largely yes, but with clear differences. Both tasks' top-10 importance lists share \(\texttt{feat\_BadEventsTotal}\), \(\texttt{DebtToIncomeRatio}\), \(\texttt{PaymentToIncomeRatio}\), \(\texttt{RevolvingUtilizationRate}\), and \(\texttt{feat\_DelinquencyScore}\). Task A further prefers structural binary flags (\(\texttt{feat\_IsHomeOwner}\), \(\texttt{feat\_HasCollateral}\), \(\texttt{IncomeVerified}\)) that sharply separate tiers; Task B weights continuous leverage ratios (\(\texttt{feat\_LoanToAssets}\), \(\texttt{feat\_MortgageLTV}\), \(\texttt{feat\_CashRunwayMonths}\)) more highly, consistent with its task of pricing within a tier.
+
+\paragraph{Iteration ladder (Figure~\ref{fig:ladder}).} We ran 14 iterations combining a variety of published Kaggle techniques. Most advanced tricks yielded essentially zero improvement over the basic stage-2 ensemble: \emph{tier-4 mixture-of-experts} regressed because each expert sees less data; \emph{monotone constraints} with the ``advanced'' enforcement mode were too restrictive and cost 0.03 accuracy on LightGBM; a \emph{rate-floor two-stage} model failed because the floor classifier's features are indistinguishable from just-above-floor rows (AUC 0.65); \emph{DART} misbehaved without early stopping; a \emph{tabular MLP} earned only 0.016 ensemble weight. The techniques that did help --- pseudo-labeling of 5\,000 confident test rows ($+0.0015$), adversarial-validation feature pruning ($+0.0001$), and KNN target features ($+0.0002$) --- collectively added only 0.0018 combined on top of the base stage-2 ensemble. The final submitted score of 0.8407 is clear evidence of a \textbf{feature ceiling}: every gradient-boosting variant we tried converged to the same narrow OOF band (0.838--0.841). Closing the gap to top teams ($\approx$0.88) would require fundamentally new features or features we cannot access under the ``no external credit data'' rule.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.9\linewidth]{figures/fig_ladder.pdf}
+    \caption{\textbf{Iteration ladder.} Green bars improved over the current champion, red regressed. After \texttt{iter8} (pseudo-labeling + KNN target features), no subsequent technique moved the needle. Dashed line: top-ranked team \emph{The Lions} at 0.88175.}
+    \label{fig:ladder}
+\end{figure}
+
+\paragraph{Conclusions.} A carefully tuned three-way boosting ensemble (LightGBM + XGBoost + CatBoost) with shared folds and cross-task stacking reaches a combined score of \(\approx\!0.84\) on 5-fold OOF --- well above the PDF's Random-Forest benchmark (0.76) and within 5\% of the top leaderboard entry. Our main learning is negative: the techniques that sound most sophisticated (mixture-of-experts, monotone constraints, tabular neural networks, second-round pseudo-labeling) did not improve this dataset. The highest-impact interventions were the least glamorous: a large set of financially motivated engineered features, clean K-fold target encoding, and a disciplined stage-2 stacker.
+
+\vspace{0.4em}
+\hrule
+\vspace{0.4em}
+
+\small
+\textbf{References.}
+LightGBM: Ke et al., \emph{NeurIPS} 2017.
+XGBoost: Chen \& Guestrin, \emph{KDD} 2016.
+CatBoost: Prokhorenkova et al., \emph{NeurIPS} 2018.
+Target encoding: Micci-Barreca, \emph{SIGKDD Explorations} 2001.
+Adversarial validation: Pan, \emph{Kaggle kernel library}, accessed 2026.
+Course PDF: \emph{AI1215 CreditSense Data Challenge Assignment}, Spring 2026.
+
+\end{document}
