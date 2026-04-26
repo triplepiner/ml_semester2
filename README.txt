@@ -5,6 +5,14 @@ Team name     : BULGARIA FOREVER
 Team members  : Makar Ulesov, Ivan Kanev, Delyan Hristov
 Kaggle user(s): makarulesov, Vizior, delyanhristov
 
+Note on team name. The team was originally registered with the course
+under the name "BULGARIA FOREVER" and is listed under that name on the
+oral-presentation schedule. When we created the team on Kaggle we briefly
+used the alternate name "Slavs"; we renamed the Kaggle team back to
+"BULGARIA FOREVER" on 26 April 2026 to align with the course schedule.
+All Kaggle submissions made under either name belong to the same three
+team members listed above.
+
 ---------------------------------------------------------------------
 1. Reproducing the submitted Kaggle CSV
 ---------------------------------------------------------------------

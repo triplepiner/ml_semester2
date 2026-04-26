@@ -114,6 +114,8 @@ const COVER = [
     children: [new TextRun({ text: 'Submission file: outputs/submission.csv', size: 20 })] }),
   new Paragraph({ spacing: { before: 60, after: 0 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'Reproduction: run code/boosting.ipynb top to bottom', size: 20 })] }),
+  new Paragraph({ spacing: { before: 600, after: 0 }, alignment: AlignmentType.CENTER,
+    children: [new TextRun({ text: 'Team-name note. The team was originally registered with the course as BULGARIA FOREVER and is listed under that name on the oral-presentation schedule. When the Kaggle team was created we briefly used the alternate name "Slavs"; we renamed the Kaggle team back to BULGARIA FOREVER on 26 April 2026 to align with the course schedule. All Kaggle submissions made under either name belong to the same three team members above.', italics: true, size: 16 })] }),
   new Paragraph({ children: [new PageBreak()] }),
 ];
 
