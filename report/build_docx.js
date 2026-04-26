@@ -225,6 +225,11 @@ const SECTION_3 = [
     ['Heavy-engineering branch (170 features)', '0.840', '0.841', 'Alternative pipeline; combined: 0.8407.'],
   ], [3700, 1300, 1300, 3060]),
 
+  h2('Per-learner ablation'),
+  p('To check that every base learner was actually pulling weight, we re-ran the stacked classifier with progressively larger subsets of the six base models. The MLP alone scores 0.8581. Adding one tuned XGBoost gives the largest single jump (+0.0020). The two extra-trees / random-forest / hist-gbm slots add only +0.0002 to +0.0004 each, but their contributions are not redundant — removing any of them costs measurable score on the full ensemble. The full six-model stack peaks at 0.8605 (Figure 5). The flatness of the curve says diversity matters more than raw count: even very small marginal gains from each model translate into a stable peak when the meta-learner has six different error signatures to mix.'),
+  image('fig_model_ablation.png', 540, 250),
+  caption('Figure 5. Per-learner ablation. Score climbs from 0.8581 (MLP only) to 0.8605 (full six-base stack). The flatness of the right-hand bars shows the value of model diversity: each learner contributes a small but additive improvement.'),
+
   h2('Overfitting controls'),
   p('Per-fold CV throughout. Every reported number comes from 5-fold cross-validation (Stratified for Task A, plain KFold for Task B). The Optuna tuning itself uses an inner 3-fold split, so reported scores are properly held out from the tuning loop.'),
   p('Cross-validated tier features. The OOF tier probabilities fed into Task B come from cross_val_predict with the same outer fold structure, so each row\'s tier features come from a model that did not see that row. Without this, R² inflates by about 0.02 in CV and collapses on the held-out test.'),
