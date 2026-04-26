@@ -120,7 +120,7 @@ const COVER = [
 ];
 
 const INTRO = [
-  p('We approached this challenge by trying two pipelines in parallel. One went heavy on feature engineering (170+ engineered features, multi-target encoding, KNN target features, multi-seed stacking, pseudo-labeling) and topped out at 0.8407. The other went the opposite direction: a small set of carefully selected features fed into stacked Optuna-tuned ensembles, which reached 0.8633. This report walks through the second pipeline, which became our submitted solution. The heavy-engineering branch is preserved in code/experiments/our_pipeline/ for traceability and is referenced in the Section 3 comparison.', { after: 200 }),
+  p('We approached this challenge by trying two pipelines in parallel. One went heavy on feature engineering (170+ engineered features, multi-target encoding, KNN target features, multi-seed stacking, pseudo-labeling) and topped out at 0.8407. The other went the opposite direction: a small set of carefully selected features fed into stacked Optuna-tuned ensembles, which reached 0.8633. This report walks through the second pipeline, which became our submitted solution. The heavy-engineering branch is referenced in the Section 3 comparison.', { after: 200 }),
 ];
 
 const SECTION_1 = [
@@ -222,7 +222,7 @@ const SECTION_3 = [
     ['Tuned RF / ET / HGB / MLP', '0.78-0.81', '0.81-0.83', 'Each adds a different error signature.'],
     ['Stacked Task A (6 base + LR meta)', '0.8812', '—', '5-fold CV, ±0.87%.'],
     ['Stacked Task B (6 base + Ridge meta)', '—', '0.8453', '5-fold CV, ±0.0140.'],
-    ['Heavy-engineering branch (170 features)', '0.840', '0.841', 'See code/experiments/our_pipeline/. Combined: 0.8407.'],
+    ['Heavy-engineering branch (170 features)', '0.840', '0.841', 'Alternative pipeline; combined: 0.8407.'],
   ], [3700, 1300, 1300, 3060]),
 
   h2('Overfitting controls'),
@@ -241,7 +241,7 @@ const SECTION_3 = [
   p('Two interventions did most of the work: aggressive feature selection (+0.07) and stacking the tuned base learners (+0.03). Smart preprocessing was the hidden enabler — without it the rest of the pipeline runs on noisier inputs and the stacking gain shrinks.'),
 
   h2('Why this beat the heavy-engineering branch'),
-  p('We ran a parallel pipeline (in code/experiments/our_pipeline/) that went the opposite direction: 50 financially motivated engineered features, K-fold target encoding for high-cardinality categoricals, K-NN target features, multi-seed stage-2 LightGBM stacker, pseudo-labeling on high-confidence test rows. That pipeline took 14 iterations and topped out at 0.8407. The canonical pipeline reached 0.8633 with about a third of the code and no pseudo-labeling.'),
+  p('We ran a parallel pipeline that went the opposite direction: 50 financially motivated engineered features, K-fold target encoding for high-cardinality categoricals, K-NN target features, multi-seed stage-2 LightGBM stacker, pseudo-labeling on high-confidence test rows. That pipeline took 14 iterations and topped out at 0.8407. The canonical pipeline reached 0.8633 with about a third of the code and no pseudo-labeling.'),
   p('Looking back, we think the heavy branch was drowning the signal. With 170 inputs the meta-learner has too many correlated features to weight properly and the base learners spend capacity learning to ignore noise. The 18-feature stack is leaner, faster (50 minutes versus 100), and leaves the boosting models room to actually fit the high-signal structure. The bitter lesson on this dataset: feature selection mattered more than feature engineering.'),
 
   h2('What we learned'),

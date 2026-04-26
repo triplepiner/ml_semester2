@@ -48,7 +48,7 @@
     {\small Report generated \today.\quad See \texttt{README.txt} for full reproduction instructions.}
 \end{titlepage}
 
-We approached this challenge by trying two pipelines in parallel. One went heavy on feature engineering (170+ engineered features, multi-target encoding, KNN target features, multi-seed stacking, pseudo-labeling) and topped out at 0.8407. The other went the opposite direction: a small set of carefully selected features fed into stacked Optuna-tuned ensembles, which reached 0.8633. This report walks through the second pipeline, which became our submitted solution. The heavy-engineering branch is preserved in \texttt{code/experiments/our\_pipeline/} for traceability and is referenced in the Section 3 comparison.
+We approached this challenge by trying two pipelines in parallel. One went heavy on feature engineering (170+ engineered features, multi-target encoding, KNN target features, multi-seed stacking, pseudo-labeling) and topped out at 0.8407. The other went the opposite direction: a small set of carefully selected features fed into stacked Optuna-tuned ensembles, which reached 0.8633. This report walks through the second pipeline, which became our submitted solution. The heavy-engineering branch is referenced in the Section 3 comparison.
 
 % =====================================================================
 % SECTION 1
@@ -221,7 +221,7 @@ Tuned RF / ET / HGB / MLP & 0.78--0.81 & 0.81--0.83 & Each adds a different erro
 \textbf{Stacked Task A (6 base + LR meta)} & \textbf{0.8812} & --- & 5-fold CV, $\pm 0.87\%$. \\
 \textbf{Stacked Task B (6 base + Ridge meta)} & --- & \textbf{0.8453} & 5-fold CV, $\pm 0.0140$. \\
 \midrule
-Heavy-engineering branch (170 features, multi-seed stage-2 LGBM) & 0.840 & 0.841 & See \texttt{code/experiments/our\_pipeline/}. Combined: 0.8407. \\
+Heavy-engineering branch (170 features, multi-seed stage-2 LGBM) & 0.840 & 0.841 & Alternative pipeline; combined: 0.8407. \\
 \bottomrule
 \end{tabular}
 \caption{Model comparison. The stacked ensemble of six tuned base learners on 18 selected features beats the alternative 170-feature pipeline by $+0.022$ combined.}
@@ -257,7 +257,7 @@ Figure~\ref{fig:progression} shows how the combined CV score climbed step by ste
 
 \subsection*{Why this beat the heavy-engineering branch}
 
-We ran a parallel pipeline (in \texttt{code/experiments/our\_pipeline/}) that went the opposite direction: 50 financially motivated engineered features, K-fold target encoding for high-cardinality categoricals, K-NN target features, multi-seed stage-2 LightGBM stacker, pseudo-labeling on high-confidence test rows. That pipeline took 14 iterations and topped out at \textbf{0.8407}. The canonical pipeline reached 0.8633 with about a third of the code and no pseudo-labeling.
+We ran a parallel pipeline that went the opposite direction: 50 financially motivated engineered features, K-fold target encoding for high-cardinality categoricals, K-NN target features, multi-seed stage-2 LightGBM stacker, pseudo-labeling on high-confidence test rows. That pipeline took 14 iterations and topped out at \textbf{0.8407}. The canonical pipeline reached 0.8633 with about a third of the code and no pseudo-labeling.
 
 Looking back, we think the heavy branch was drowning the signal. With 170 inputs the meta-learner has too many correlated features to weight properly and the base learners spend capacity learning to ignore noise. The 18-feature stack is leaner, faster (50 minutes versus 100), and leaves the boosting models room to actually fit the high-signal structure. The bitter lesson on this dataset: feature selection mattered more than feature engineering.
 
