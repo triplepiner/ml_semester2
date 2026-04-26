@@ -234,8 +234,8 @@ To check that every base learner was actually pulling weight, we re-ran the stac
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\linewidth]{fig_model_ablation.pdf}
-    \caption{Per-learner ablation. Score climbs from 0.8581 (MLP only) to 0.8605 (full six-base stack). The flatness of the right-hand bars shows the value of model diversity: each learner contributes a small but additive improvement.}
+    \includegraphics[width=0.68\linewidth]{fig_model_ablation.pdf}
+    \caption{Per-learner ablation. Score climbs from 0.8581 (MLP only) to 0.8605 (full six-base stack). Each learner contributes a small but additive improvement.}
     \label{fig:model_ablation}
 \end{figure}
 
@@ -251,35 +251,20 @@ To check that every base learner was actually pulling weight, we re-ran the stac
 
 \subsection*{Did the same features matter for both tasks?}
 
-Mostly yes. Both top-10 importance lists are dominated by the same five names: \texttt{RiskSeverityScore}, \texttt{DebtToIncomeRatio}, \texttt{RevolvingUtilizationRate}, \texttt{TotalLatePayments}, \texttt{NumberOfSatisfactoryAccounts}. After that the lists diverge in the way you would expect from the structure of the two problems. Task A weights structural binary signals more highly: \texttt{HomeOwnership=Mortgage}, \texttt{IncomeVerified}, \texttt{HasCoApplicant}. These cleanly separate tier boundaries. Task B leans on continuous leverage ratios: \texttt{LoanToIncomeRatio}, \texttt{PaymentToIncomeRatio}, \texttt{SatisfactoryAccountRatio}. That makes sense — Task B is pricing a rate within a tier, not picking the tier itself, so it cares about graded financial stress rather than categorical risk class.
+Mostly yes. Both top-10 lists share \texttt{RiskSeverityScore}, \texttt{DebtToIncomeRatio}, \texttt{RevolvingUtilizationRate}, \texttt{TotalLatePayments}, \texttt{NumberOfSatisfactoryAccounts}. They diverge after that. Task A weights structural binary signals (\texttt{HomeOwnership=Mortgage}, \texttt{IncomeVerified}, \texttt{HasCoApplicant}) that cleanly separate tier boundaries. Task B leans on continuous leverage ratios (\texttt{LoanToIncomeRatio}, \texttt{PaymentToIncomeRatio}, \texttt{SatisfactoryAccountRatio}) — it is pricing a rate within a tier, not picking the tier. The shared top features are also why cross-task stacking works: the OOF tier probabilities collapse the joint information into six numbers the regressor uses directly.
 
-The fact that the two tasks share so many top features is also why cross-task stacking works. The OOF tier probabilities collapse the joint information into six numbers the regressor can use directly.
+\subsection*{Score progression and what we learned}
 
-\subsection*{The score progression}
-
-Figure~\ref{fig:progression} shows how the combined CV score climbed step by step. Two interventions did most of the work: aggressive feature selection ($+0.07$) and stacking the tuned base learners ($+0.03$). Smart preprocessing was the hidden enabler — without it the rest of the pipeline runs on noisier inputs and the stacking gain shrinks.
+Figure~\ref{fig:progression} traces the combined CV score across pipeline stages. Two interventions did most of the work: aggressive feature selection ($+0.07$) and stacking the tuned base learners ($+0.03$). Smart preprocessing was the hidden enabler — without it the stacking gain shrinks because the bases are noisier.
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.85\linewidth]{fig_progression.pdf}
-    \caption{Combined CV score progression for the canonical pipeline. From a 0.51 linear baseline to a 0.86 stacked ensemble, with the largest single jumps coming from feature selection and stacking.}
+    \includegraphics[width=0.62\linewidth]{fig_progression.pdf}
+    \caption{Combined CV score progression. From a 0.51 linear baseline to a 0.86 stacked ensemble, with the largest single jumps from feature selection and stacking.}
     \label{fig:progression}
 \end{figure}
 
-\subsection*{Why this beat the heavy-engineering branch}
-
-We ran a parallel pipeline that went the opposite direction: 50 financially motivated engineered features, K-fold target encoding for high-cardinality categoricals, K-NN target features, multi-seed stage-2 LightGBM stacker, pseudo-labeling on high-confidence test rows. That pipeline took 14 iterations and topped out at \textbf{0.8407}. The canonical pipeline reached 0.8633 with about a third of the code and no pseudo-labeling.
-
-Looking back, we think the heavy branch was drowning the signal. With 170 inputs the meta-learner has too many correlated features to weight properly and the base learners spend capacity learning to ignore noise. The 18-feature stack is leaner, faster (50 minutes versus 100), and leaves the boosting models room to actually fit the high-signal structure. The bitter lesson on this dataset: feature selection mattered more than feature engineering.
-
-\subsection*{What we learned}
-
-Three things, ranked by impact:
-\begin{enumerate}
-\item Aggressive feature selection beats aggressive feature engineering when the dataset is small (35k rows) and the natural feature count is modest (55 columns). Adding more features dilutes the signal that already exists.
-\item Per-model Optuna tuning on a small budget (15--25 trials) is enough to make stacking useful. Stacking under-tuned base learners gains very little.
-\item OOF cross-task features have to be computed with the same outer fold structure as the eval, otherwise CV optimism inflates by 0.02--0.03. We caught this early because both pipelines used 5-fold CV with the same seed.
-\end{enumerate}
+The parallel heavy-engineering pipeline took 14 iterations and 170 features, topping out at \textbf{0.8407}. The canonical pipeline reached 0.8633 with about a third of the code: with 170 inputs the meta-learner has too many correlated features to weight properly and the bases spend capacity ignoring noise. Three lessons: (1) aggressive feature selection beats aggressive feature engineering when the dataset is small; (2) per-model Optuna on a small budget (15--25 trials) is enough to make stacking useful; (3) OOF cross-task features must use the same outer fold structure as the eval, or CV optimism inflates by 0.02--0.03.
 
 \vspace{0.6em}
 \hrule

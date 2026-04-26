@@ -240,19 +240,11 @@ const SECTION_3 = [
   p('Mostly yes. Both top-10 importance lists are dominated by the same five names: RiskSeverityScore, DebtToIncomeRatio, RevolvingUtilizationRate, TotalLatePayments, NumberOfSatisfactoryAccounts. After that the lists diverge in the way you would expect from the structure of the two problems. Task A weights structural binary signals more highly: HomeOwnership=Mortgage, IncomeVerified, HasCoApplicant. These cleanly separate tier boundaries. Task B leans on continuous leverage ratios: LoanToIncomeRatio, PaymentToIncomeRatio, SatisfactoryAccountRatio. That makes sense — Task B is pricing a rate within a tier, not picking the tier itself, so it cares about graded financial stress rather than categorical risk class.'),
   p('The fact that the two tasks share so many top features is also why cross-task stacking works. The OOF tier probabilities collapse the joint information into six numbers the regressor can use directly.'),
 
-  h2('The score progression'),
-  image('fig_progression.png', 540, 270),
-  caption('Figure 4. Combined CV score progression. From a 0.51 linear baseline to a 0.86 stacked ensemble, with the largest single jumps from feature selection and stacking.'),
-  p('Two interventions did most of the work: aggressive feature selection (+0.07) and stacking the tuned base learners (+0.03). Smart preprocessing was the hidden enabler — without it the rest of the pipeline runs on noisier inputs and the stacking gain shrinks.'),
-
-  h2('Why this beat the heavy-engineering branch'),
-  p('We ran a parallel pipeline that went the opposite direction: 50 financially motivated engineered features, K-fold target encoding for high-cardinality categoricals, K-NN target features, multi-seed stage-2 LightGBM stacker, pseudo-labeling on high-confidence test rows. That pipeline took 14 iterations and topped out at 0.8407. The canonical pipeline reached 0.8633 with about a third of the code and no pseudo-labeling.'),
-  p('Looking back, we think the heavy branch was drowning the signal. With 170 inputs the meta-learner has too many correlated features to weight properly and the base learners spend capacity learning to ignore noise. The 18-feature stack is leaner, faster (50 minutes versus 100), and leaves the boosting models room to actually fit the high-signal structure. The bitter lesson on this dataset: feature selection mattered more than feature engineering.'),
-
-  h2('What we learned'),
-  p('1. Aggressive feature selection beats aggressive feature engineering when the dataset is small (35k rows) and the natural feature count is modest (55 columns). Adding more features dilutes the signal that already exists.'),
-  p('2. Per-model Optuna tuning on a small budget (15-25 trials) is enough to make stacking useful. Stacking under-tuned base learners gains very little.'),
-  p('3. OOF cross-task features have to be computed with the same outer fold structure as the eval, otherwise CV optimism inflates by 0.02-0.03. We caught this early because both pipelines used 5-fold CV with the same seed.'),
+  h2('Score progression and what we learned'),
+  p('Figure 4 traces the combined CV score across pipeline stages. Two interventions did most of the work: aggressive feature selection (+0.07) and stacking the tuned base learners (+0.03). Smart preprocessing was the hidden enabler — without it the stacking gain shrinks because the bases are noisier.'),
+  image('fig_progression.png', 480, 240),
+  caption('Figure 4. Combined CV score progression for the canonical pipeline. From a 0.51 linear baseline to a 0.86 stacked ensemble, with the largest single jumps from feature selection and stacking.'),
+  p('The parallel heavy-engineering pipeline took 14 iterations of feature engineering, K-fold target encoding, K-NN target features, multi-seed stage-2 LightGBM stacking, and pseudo-labeling, and topped out at 0.8407. The canonical pipeline reached 0.8633 with about a third of the code. With 170 inputs the meta-learner has too many correlated features to weight properly and the base learners spend capacity learning to ignore noise. Three lessons we would carry into the next problem: (1) aggressive feature selection beats aggressive feature engineering when the dataset is small and the natural feature count is modest — adding features dilutes signal; (2) per-model Optuna tuning on a small budget (15-25 trials) is enough to make stacking useful, while stacking under-tuned bases gains very little; (3) OOF cross-task features must use the same outer fold structure as the eval, otherwise CV optimism inflates by 0.02-0.03.'),
 ];
 
 const REFERENCES = [
