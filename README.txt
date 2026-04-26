@@ -3,7 +3,7 @@ CreditSense - Loan Risk Assessment Challenge (AI1215, Spring 2026)
 
 Team name     : Slavs
 Team members  : Makar Ulesov, Ivan Kanev, Delyan Hristov
-Kaggle user(s): <KAGGLE_USERNAME>      # fill in before submission
+Kaggle user(s): makarulesov, Vizior, delyanhristov
 
 ---------------------------------------------------------------------
 1. Reproducing the submitted Kaggle CSV

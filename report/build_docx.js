@@ -107,7 +107,7 @@ const COVER = [
   new Paragraph({ spacing: { before: 60, after: 0 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'Makar Ulesov     Ivan Kanev     Delyan Hristov', size: 22 })] }),
   new Paragraph({ spacing: { before: 1400, after: 0 }, alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: 'Kaggle username: <KAGGLE_USERNAME>', size: 20 })] }),
+    children: [new TextRun({ text: 'Kaggle usernames: makarulesov, Vizior, delyanhristov', size: 20 })] }),
   new Paragraph({ spacing: { before: 60, after: 0 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'Combined CV score: 0.8633 (acc 0.8812, R² 0.8453)', size: 20 })] }),
   new Paragraph({ spacing: { before: 60, after: 0 }, alignment: AlignmentType.CENTER,
