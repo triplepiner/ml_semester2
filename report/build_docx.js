@@ -103,7 +103,7 @@ const COVER = [
   new Paragraph({ spacing: { before: 80, after: 0 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'Spring 2026 Data Challenge', size: 24 })] }),
   new Paragraph({ spacing: { before: 1600, after: 0 }, alignment: AlignmentType.CENTER,
-    children: [new TextRun({ text: 'Team Slavs', bold: true, size: 32 })] }),
+    children: [new TextRun({ text: 'Team BULGARIA FOREVER', bold: true, size: 32 })] }),
   new Paragraph({ spacing: { before: 60, after: 0 }, alignment: AlignmentType.CENTER,
     children: [new TextRun({ text: 'Makar Ulesov     Ivan Kanev     Delyan Hristov', size: 22 })] }),
   new Paragraph({ spacing: { before: 1400, after: 0 }, alignment: AlignmentType.CENTER,

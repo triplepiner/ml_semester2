@@ -1,7 +1,7 @@
 CreditSense - Loan Risk Assessment Challenge (AI1215, Spring 2026)
 =====================================================================
 
-Team name     : Slavs
+Team name     : BULGARIA FOREVER
 Team members  : Makar Ulesov, Ivan Kanev, Delyan Hristov
 Kaggle user(s): makarulesov, Vizior, delyanhristov
 
